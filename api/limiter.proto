@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package limiter;
+
+option go_package ="github.com/AbhinavG786/GopherGuard/internal/grpc/pb";
+
+message RateLimitRequest{
+    string key=1;
+    int32 limit=2;
+    int32 window_ms=3;
+}
+
+message RateLimitResponse{
+    bool allowed=1;
+    int32 remaining=2;
+}
+
+service RateLimiter{
+    rpc Check(RateLimitRequest) returns (RateLimitResponse);
+}
