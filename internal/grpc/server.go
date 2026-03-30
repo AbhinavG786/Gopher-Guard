@@ -2,19 +2,25 @@ package grpc
 
 import (
 	"context"
-	"fmt"
+	"time"
+	"log/slog"
+	"github.com/AbhinavG786/Gopher-Guard/internal/engine"
 	"github.com/AbhinavG786/Gopher-Guard/internal/grpc/pb"
 )
 
 type Server struct{
 	pb.UnimplementedRateLimiterServer
+	Limiter *engine.SlidingWindow
 }
 
 func (s *Server) Check(ctx context.Context, req *pb.RateLimitRequest) (*pb.RateLimitResponse,error){
-	fmt.Printf("Received check request for key: %s\n", req.Key)
+	slog.Info("Received check request", slog.String("key", req.Key),slog.Int("limit", int(req.Limit)), slog.Int("window_ms", int(req.WindowMs)))
+
+	windowDuration:=time.Duration(req.WindowMs)*time.Millisecond
+	allowed,remaining:=s.Limiter.Allow(req.Key,req.Limit,windowDuration)
 
 	return &pb.RateLimitResponse{
-		Allowed: true,
-		Remaining: 99,
+		Allowed: allowed,
+		Remaining: remaining,
 	},nil
 }
