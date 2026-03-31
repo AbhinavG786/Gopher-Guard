@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"encoding/json"
 	"io"
 	"log/slog"
 	"time"
@@ -16,13 +17,7 @@ type Snapshot struct {
 	state map[string][]time.Time
 }
 
-func (s *Snapshot) Persist(sink raft.SnapshotSink) error {
-	return sink.Cancel()
-}
-
-func (s *Snapshot) Release() {
-
-}
+func (s *Snapshot) Release() {}
 
 func (f *LimiterFSM) Apply(logEntry *raft.Log) interface{}{
 	cmd,err:=DecodeCommand(logEntry.Data)
@@ -55,6 +50,35 @@ func (f *LimiterFSM) Snapshot() (raft.FSMSnapshot,error){
 
 func (f *LimiterFSM) Restore(rc io.ReadCloser) error{
 	slog.Info("Restoring FSM state from snapshot")
-	// TODO: Implement restore logic
+	defer rc.Close()
+
+	data,err:=io.ReadAll(rc)
+	if err!=nil{
+		return err
+	}
+
+	newState:=make(map[string][]time.Time)
+	if err:=json.Unmarshal(data,&newState);err!=nil{
+		return err
+	}
+	f.Engine.mu.Lock()
+	defer f.Engine.mu.Unlock()
+	f.Engine.requests=newState
+	
 	return nil
+}
+
+func (s *Snapshot) Persist(sink raft.SnapshotSink) error {
+	slog.Info("Persisting snapshot")
+	data,err:=json.Marshal(s.state)
+	if err!=nil{
+		sink.Cancel()
+		return err
+	}
+
+	if _,err:=sink.Write(data); err!=nil{
+		sink.Cancel()
+		return err
+	}
+	return sink.Close()
 }

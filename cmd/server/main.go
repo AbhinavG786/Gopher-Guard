@@ -3,15 +3,17 @@ package main
 import (
 	"log/slog"
 	"net"
-	"time"
 	"os"
 	"os/signal"
-	"syscall"
 	"strconv"
-	"github.com/joho/godotenv"
+	"syscall"
+	"time"
+
 	"github.com/AbhinavG786/Gopher-Guard/internal/engine"
 	mygrpc "github.com/AbhinavG786/Gopher-Guard/internal/grpc"
 	"github.com/AbhinavG786/Gopher-Guard/internal/grpc/pb"
+	"github.com/AbhinavG786/Gopher-Guard/internal/raft"
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 )
 
@@ -20,6 +22,9 @@ func main(){
 	port:=getEnv("PORT","50051")
 	janitorInterval:=getEnvAsInt("JANITOR_INTERVAL_SEC",60)
 	maxWindow:=getEnvAsInt("MAX_WINDOW_SEC",3600)
+	nodeID:=getEnv("NODE_ID","node-1")
+	raftBindAddr := getEnv("RAFT_BIND", "127.0.0.1:7000") 
+	raftDir := getEnv("RAFT_DIR", "./raft-data")
 	
 	logger:=slog.New(slog.NewJSONHandler(os.Stdout,nil))
 	slog.SetDefault(logger)
@@ -36,6 +41,18 @@ func main(){
 		os.Exit(1)
 	}
 	slog.Info("Server is listening on", slog.String("address", lis.Addr().String()))
+
+	limiterFSM:=&engine.LimiterFSM{
+		Engine: rateLimiterEngine,
+	}
+
+	raftNode,err:=raft.SetupRaft(nodeID,raftBindAddr,raftDir,limiterFSM)
+	if err!=nil{
+		slog.Error("Failed to set up Raft node", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	rateLimiterEngine.RaftNode=raftNode
 
 	grpcServer:=grpc.NewServer()
 

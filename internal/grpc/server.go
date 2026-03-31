@@ -17,7 +17,12 @@ func (s *Server) Check(ctx context.Context, req *pb.RateLimitRequest) (*pb.RateL
 	slog.Info("Received check request", slog.String("key", req.Key),slog.Int("limit", int(req.Limit)), slog.Int("window_ms", int(req.WindowMs)))
 
 	windowDuration:=time.Duration(req.WindowMs)*time.Millisecond
-	allowed,remaining:=s.Limiter.Allow(req.Key,req.Limit,windowDuration)
+	allowed,remaining,err:=s.Limiter.Allow(req.Key,req.Limit,windowDuration)
+	if err != nil {
+		// If we aren't the leader, or Raft failed, tell the client
+		slog.Error("Raft rejection", slog.String("error", err.Error()))
+		return nil, err
+	}
 
 	return &pb.RateLimitResponse{
 		Allowed: allowed,
