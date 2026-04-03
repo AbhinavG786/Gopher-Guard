@@ -24,7 +24,7 @@ func (sw *SlidingWindow) Allow(key string,limit int32,windowMs time.Duration) (b
 	if sw.RaftNode!=nil && sw.RaftNode.State()!=raft.Leader{
 		return false,0,fmt.Errorf("node is not the raft leader")
 	}
-	defer sw.mu.Unlock()
+	 
 	
 	now:=time.Now()
 	boundary:=now.Add(-windowMs)
@@ -39,6 +39,7 @@ func (sw *SlidingWindow) Allow(key string,limit int32,windowMs time.Duration) (b
 			validCount++
 		}
 	}
+	sw.mu.RUnlock()
 
 	// if (int32(len(validTimestamps)) < int32(limit)){
 	// 	validTimestamps=append(validTimestamps, now)

@@ -14,7 +14,7 @@ type Server struct{
 }
 
 func (s *Server) Check(ctx context.Context, req *pb.RateLimitRequest) (*pb.RateLimitResponse,error){
-	slog.Info("Received check request", slog.String("key", req.Key),slog.Int("limit", int(req.Limit)), slog.Int("window_ms", int(req.WindowMs)))
+	slog.Info("🚨Received check request", slog.String("key", req.Key),slog.Int("limit", int(req.Limit)), slog.Int("window_ms", int(req.WindowMs)))
 
 	windowDuration:=time.Duration(req.WindowMs)*time.Millisecond
 	allowed,remaining,err:=s.Limiter.Allow(req.Key,req.Limit,windowDuration)

@@ -10,13 +10,13 @@ import (
 )
 
 func main(){
-	conn,err:= grpc.NewClient("localhost:50051",grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn,err:= grpc.NewClient("127.0.0.1:50051",grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err!=nil{
 		log.Fatalf("Failed to connect: %v",err)
 	}
 	defer conn.Close()
 	client:=pb.NewRateLimiterClient(conn)
-	ctx,cancel:=context.WithTimeout(context.Background(),time.Second)
+	ctx,cancel:=context.WithTimeout(context.Background(),3*time.Second)
 	defer cancel()
 
 	log.Println("Sending check request for user_123")

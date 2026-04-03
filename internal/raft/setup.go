@@ -12,13 +12,17 @@ import (
 	raftboltdb "github.com/hashicorp/raft-boltdb/v2"
 )
 
-func SetupRaft(nodeID string,bindAddr string,baseDir string, fsm raft.FSM) (*raft.Raft, error){
+func SetupRaft(nodeID string,bindAddr string,baseDir string, fsm raft.FSM,bootstrap bool) (*raft.Raft, error){
 	config:=raft.DefaultConfig();
 	config.LocalID=raft.ServerID(nodeID)
 
-	if err:=os.Mkdir(baseDir,0700); err!=nil {
-		return nil, fmt.Errorf("failed to create base directory: %w", err)
-	}
+// 	if _,err:=os.Stat(baseDir);os.IsNotExist(err){
+// 	if err:=os.Mkdir(baseDir,0700); err!=nil {
+// 		return nil, fmt.Errorf("failed to create base directory: %w", err)
+// 	}
+// }
+
+	_=os.MkdirAll(baseDir,0700)
 
 	addr,err:=net.ResolveTCPAddr("tcp",bindAddr)
 	if err!=nil{
@@ -49,7 +53,7 @@ func SetupRaft(nodeID string,bindAddr string,baseDir string, fsm raft.FSM) (*raf
 		return nil, fmt.Errorf("failed to check existing Raft state: %w", err)
 	}
 
-	if !hasState{
+	if !hasState && bootstrap {
 		slog.Info("Bootstrapping new Raft cluster", slog.String("node_id", nodeID))
 		configuration:=raft.Configuration{
 			Servers: []raft.Server{
@@ -63,6 +67,8 @@ func SetupRaft(nodeID string,bindAddr string,baseDir string, fsm raft.FSM) (*raf
 		if err:=future.Error(); err!=nil{
 			return nil, fmt.Errorf("failed to bootstrap Raft cluster: %w", err)
 		}
+	} else if !hasState {
+		slog.Info("Starting as follower, waiting to be added to cluster", slog.String("node_id", nodeID))
 	} else {
 		slog.Info("Recovering existing Raft state", slog.String("node_id", nodeID))
 	}
