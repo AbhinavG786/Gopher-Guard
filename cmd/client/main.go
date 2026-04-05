@@ -2,34 +2,34 @@ package main
 
 import (
 	"context"
-	"log"
-	"time"
+	"github.com/AbhinavG786/Gopher-Guard/internal/grpc/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"github.com/AbhinavG786/Gopher-Guard/internal/grpc/pb"
+	"log"
+	"time"
 )
 
-func main(){
-	conn,err:= grpc.NewClient("127.0.0.1:50051",grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err!=nil{
-		log.Fatalf("Failed to connect: %v",err)
+func main() {
+	conn, err := grpc.NewClient("127.0.0.1:50054", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("Failed to connect: %v", err)
 	}
 	defer conn.Close()
-	client:=pb.NewRateLimiterClient(conn)
-	ctx,cancel:=context.WithTimeout(context.Background(),3*time.Second)
+	client := pb.NewRateLimiterClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	log.Println("Sending check request for user_123")
-	for range 5{
+	for range 5 {
 		time.Sleep(100 * time.Millisecond)
-		res,err:=client.Check(ctx,&pb.RateLimitRequest{
-			Key: "user_123",
-			Limit: 3,
+		res, err := client.Check(ctx, &pb.RateLimitRequest{
+			Key:      "user_123",
+			Limit:    3,
 			WindowMs: 60000,
 		})
-	if err!=nil{
-		log.Fatalf("Failed to check rate limit: %v",err)
+		if err != nil {
+			log.Fatalf("Failed to check rate limit: %v", err)
+		}
+		log.Printf("Allowed: %v, Remaining: %d", res.Allowed, res.Remaining)
 	}
-	log.Printf("Allowed: %v, Remaining: %d",res.Allowed,res.Remaining)
-}
 }

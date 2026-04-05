@@ -1,0 +1,16 @@
+# Version Control
+.git
+.github
+
+# Local Data
+raft-data/
+docker-data/
+*.db
+
+# Binaries 
+gopher-guard
+*.exe
+
+# Documentation
+use-case.txt
+README.md

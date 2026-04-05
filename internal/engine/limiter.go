@@ -8,33 +8,32 @@ import (
 	"github.com/hashicorp/raft"
 )
 
-type SlidingWindow struct{
-	mu sync.RWMutex
+type SlidingWindow struct {
+	mu       sync.RWMutex
 	requests map[string][]time.Time
 	RaftNode *raft.Raft
 }
 
-func NewSlidingWindow() *SlidingWindow{
-	return  &SlidingWindow{
+func NewSlidingWindow() *SlidingWindow {
+	return &SlidingWindow{
 		requests: make(map[string][]time.Time),
 	}
 }
 
-func (sw *SlidingWindow) Allow(key string,limit int32,windowMs time.Duration) (bool,int32,error){
-	if sw.RaftNode!=nil && sw.RaftNode.State()!=raft.Leader{
-		return false,0,fmt.Errorf("node is not the raft leader")
+func (sw *SlidingWindow) Allow(key string, limit int32, windowMs time.Duration) (bool, int32, error) {
+	if sw.RaftNode != nil && sw.RaftNode.State() != raft.Leader {
+		return false, 0, fmt.Errorf("node is not the raft leader")
 	}
-	 
-	
-	now:=time.Now()
-	boundary:=now.Add(-windowMs)
-	
+
+	now := time.Now()
+	boundary := now.Add(-windowMs)
+
 	sw.mu.RLock()
-	timestamps:=sw.requests[key]
+	timestamps := sw.requests[key]
 	// var validTimestamps []time.Time
-	var validCount int
-	for _,ts :=range timestamps{
-		if ts.After(boundary){
+	var validCount int32
+	for _, ts := range timestamps {
+		if ts.After(boundary) {
 			// validTimestamps = append(validTimestamps, ts)
 			validCount++
 		}
@@ -48,60 +47,72 @@ func (sw *SlidingWindow) Allow(key string,limit int32,windowMs time.Duration) (b
 	// 	return true,remaining
 	// }
 
-	if validCount>=int(limit){
-		return false,0,nil
+	if validCount >= limit {
+		RateLimitRequests.WithLabelValues("denied").Inc()
+		return false, 0, nil
 	}
 
-	cmd:=LogCommand{
-		Type: CommandAddTimestamp,
-		Key: key,
+	cmd := LogCommand{
+		Type:      CommandAddTimestamp,
+		Key:       key,
 		Timestamp: now,
 	}
 
-	data,err:=cmd.Encode()
-	if err!=nil{
-		return false,0,fmt.Errorf("failed to encode command: %w", err)
+	data, err := cmd.Encode()
+	if err != nil {
+		return false, 0, fmt.Errorf("failed to encode command: %w", err)
 	}
 
-	future:=sw.RaftNode.Apply(data,500*time.Millisecond)
-	if err:=future.Error();err!=nil{
-		return false,0,err
+	if sw.RaftNode != nil {
+		future := sw.RaftNode.Apply(data, 500*time.Millisecond)
+		if err := future.Error(); err != nil {
+			return false, 0, err
+		}
+	} else {
+		sw.mu.Lock()
+		sw.requests[key] = append(sw.requests[key], now)
+		sw.mu.Unlock()
 	}
+
+	RateLimitRequests.WithLabelValues("allowed").Inc()
 
 	// sw.requests[key]=validTimestamps
-	remaining:=limit-int32(validCount)-1
-	return true,remaining,nil
+	remaining := limit - validCount - 1
+	if remaining < 0 {
+		remaining = 0
+	}
+	return true, remaining, nil
 }
 
-func (sw *SlidingWindow) StartJanitor(interval time.Duration, maxWindow time.Duration){
-	go func(){
-		ticker:=time.NewTicker(interval)
+func (sw *SlidingWindow) StartJanitor(interval time.Duration, maxWindow time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
-		for range ticker.C{
+		for range ticker.C {
 			sw.cleanUp(maxWindow)
 		}
 	}()
 }
 
-func(sw *SlidingWindow) cleanUp(maxWindow time.Duration){
+func (sw *SlidingWindow) cleanUp(maxWindow time.Duration) {
 	sw.mu.Lock()
 	defer sw.mu.Unlock()
 
-	now:=time.Now()
-	boundary:=now.Add(-maxWindow)
-	
-	for key,timestamps:= range sw.requests{
+	now := time.Now()
+	boundary := now.Add(-maxWindow)
+
+	for key, timestamps := range sw.requests {
 		var validTimestamps []time.Time
-		for _,ts:=range timestamps{
-			if(ts.After(boundary)){
-				validTimestamps=append(validTimestamps, now)
+		for _, ts := range timestamps {
+			if ts.After(boundary) {
+				validTimestamps = append(validTimestamps, now)
 			}
 		}
-		if len(validTimestamps) > 0{
-			sw.requests[key]=validTimestamps
-		} else{
-			delete(sw.requests,key)
+		if len(validTimestamps) > 0 {
+			sw.requests[key] = validTimestamps
+		} else {
+			delete(sw.requests, key)
 		}
 	}
 }

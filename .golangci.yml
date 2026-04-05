@@ -1,0 +1,26 @@
+run:
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 3m
+  # exit code when at least one issue was found, default is 1
+  issues-exit-code: 1
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck    # Finds unchecked errors
+    - gosimple    # Suggests code simplifications
+    - govet       # Reports suspicious constructs (official Go tool)
+    - ineffassign # Detects when assignments to existing variables are not used
+    - staticcheck # A massive, essential bug-finding linter
+    - typecheck   # Standard Go type checking
+    - unused      # Checks for unused constants, variables, functions
+    - gofmt       # Checks if code is properly formatted
+    - gosec       # Inspects source code for security problems
+    - misspell    # Finds commonly misspelled English words in comments
+
+issues:
+  # Exclude some specific issues that are overly noisy
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck # We can be a bit looser with error checking in test files

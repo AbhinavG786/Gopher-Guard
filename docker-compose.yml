@@ -1,0 +1,116 @@
+services:
+  # GOPHER-GUARD CLUSTER
+  node-1:
+    build: .
+    container_name: gopher-node-1
+    environment:
+      - PORT=50051
+      - ADMIN_PORT=8080
+      - NODE_ID=node-1
+      - BOOTSTRAP=true
+      - RAFT_BIND=gopher-node-1:7000
+      - RAFT_DIR=/root/raft-data
+    ports:
+      - "50051:50051"
+      - "8080:8080"
+    volumes:
+      - ./docker-data/node-1:/root/raft-data
+
+  node-2:
+    build: .
+    container_name: gopher-node-2
+    environment:
+      - PORT=50052
+      - ADMIN_PORT=8081
+      - NODE_ID=node-2
+      - BOOTSTRAP=false
+      - RAFT_BIND=gopher-node-2:7001 
+      - RAFT_DIR=/root/raft-data
+    ports:
+      - "50052:50052"
+      - "8081:8081"
+    volumes:
+      - ./docker-data/node-2:/root/raft-data
+    depends_on:
+      - node-1
+
+  node-3:
+    build: .
+    container_name: gopher-node-3
+    environment:
+      - PORT=50053
+      - ADMIN_PORT=8082
+      - NODE_ID=node-3
+      - BOOTSTRAP=false
+      - RAFT_BIND=gopher-node-3:7002
+      - RAFT_DIR=/root/raft-data
+    ports:
+      - "50053:50053"
+      - "8082:8082"
+    volumes:
+      - ./docker-data/node-3:/root/raft-data
+    depends_on:
+      - node-1
+  node-4:
+    build: .
+    container_name: gopher-node-4
+    environment:
+      - PORT=50054
+      - ADMIN_PORT=8083
+      - NODE_ID=node-4
+      - BOOTSTRAP=false
+      - RAFT_BIND=gopher-node-4:7003
+      - RAFT_DIR=/root/raft-data
+    ports:
+      - "50054:50054"
+      - "8083:8083"
+    volumes:
+      - ./docker-data/node-4:/root/raft-data
+    depends_on:
+      - node-1
+  node-5:
+    build: .
+    container_name: gopher-node-5
+    environment:
+      - PORT=50055
+      - ADMIN_PORT=8084
+      - NODE_ID=node-5
+      - BOOTSTRAP=false
+      - RAFT_BIND=gopher-node-5:7004
+      - RAFT_DIR=/root/raft-data
+    ports:
+      - "50055:50055"
+      - "8084:8084"
+    volumes:
+      - ./docker-data/node-5:/root/raft-data
+    depends_on:
+      - node-1
+
+  # OBSERVABILITY STACK
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards 
+
+volumes:
+  grafana-storage:

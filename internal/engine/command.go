@@ -7,22 +7,22 @@ import (
 
 type CommandType string
 
-const ( 
+const (
 	CommandAddTimestamp CommandType = "ADD_TIMESTAMP"
 )
 
 type LogCommand struct {
-	Type CommandType	`json:"type"`
-	Key string			`json:"key"`
-	Timestamp time.Time	`json:"timestamp"`
+	Type      CommandType `json:"type"`
+	Key       string      `json:"key"`
+	Timestamp time.Time   `json:"timestamp"`
 }
 
-func (lg *LogCommand) Encode()([]byte,error){
+func (lg *LogCommand) Encode() ([]byte, error) {
 	return json.Marshal(lg)
 }
 
-func DecodeCommand(data []byte) (*LogCommand,error){
+func DecodeCommand(data []byte) (*LogCommand, error) {
 	var cmd LogCommand
-	err:=json.Unmarshal(data,&cmd)
-	return &cmd,err
+	err := json.Unmarshal(data, &cmd)
+	return &cmd, err
 }

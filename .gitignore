@@ -1,2 +1,19 @@
+# Binaries
 /gopher-guard
-/raft-data
+*.exe
+*.test
+
+# Local Data 
+/raft-data/
+/docker-data/
+*.db
+
+# OS Junk
+.DS_Store
+dist/
+
+# Development Notes
+use-case.txt
+
+# Environment
+.env
