@@ -37,7 +37,7 @@ func main() {
 	_ = godotenv.Load()
 	port := getEnv("PORT", "50051")
 	adminPort := getEnv("ADMIN_PORT", "8080")
-	janitorInterval := getEnvAsInt("JANITOR_INTERVAL_SEC", 60)
+	janitorInterval := getEnvAsInt("JANITOR_INTERVAL_SEC", 30)
 	maxWindow := getEnvAsInt("MAX_WINDOW_SEC", 3600)
 	nodeID := getEnv("NODE_ID", "node-1")
 	isBootstrap := getEnv("BOOTSTRAP", "false") == "true"

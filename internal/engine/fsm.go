@@ -31,6 +31,11 @@ func (f *LimiterFSM) Apply(logEntry *raft.Log) interface{} {
 		defer f.Engine.mu.Unlock()
 		f.Engine.requests[cmd.Key] = append(f.Engine.requests[cmd.Key], cmd.Timestamp)
 		slog.Debug("Applied ADD_TIMESTAMP via Raft", slog.String("key", cmd.Key))
+	case CommandDeleteKey:
+		f.Engine.mu.Lock()
+		defer f.Engine.mu.Unlock()
+		delete(f.Engine.requests, cmd.Key)
+		slog.Debug("Applied DELETE_KEY via Raft", slog.String("key", cmd.Key))
 	default:
 		slog.Warn("Unknown command type", slog.String("type", string(cmd.Type)))
 	}

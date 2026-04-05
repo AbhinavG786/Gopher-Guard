@@ -2,6 +2,8 @@ package engine
 
 import (
 	"fmt"
+	"log/slog"
+	"math"
 	"sync"
 	"time"
 
@@ -28,17 +30,22 @@ func (sw *SlidingWindow) Allow(key string, limit int32, windowMs time.Duration) 
 	now := time.Now()
 	boundary := now.Add(-windowMs)
 
-	sw.mu.RLock()
+	sw.mu.Lock()
 	timestamps := sw.requests[key]
-	// var validTimestamps []time.Time
-	var validCount int32
+	validTimestamps := timestamps[:0]
 	for _, ts := range timestamps {
 		if ts.After(boundary) {
-			// validTimestamps = append(validTimestamps, ts)
-			validCount++
+			validTimestamps = append(validTimestamps, ts)
 		}
 	}
-	sw.mu.RUnlock()
+	sw.requests[key] = validTimestamps
+	validCount := len(validTimestamps)
+	sw.mu.Unlock()
+
+	if validCount > math.MaxInt32 {
+		return false, 0, fmt.Errorf("request count overflow")
+	}
+	validCount32 := int32(validCount)
 
 	// if (int32(len(validTimestamps)) < int32(limit)){
 	// 	validTimestamps=append(validTimestamps, now)
@@ -47,7 +54,7 @@ func (sw *SlidingWindow) Allow(key string, limit int32, windowMs time.Duration) 
 	// 	return true,remaining
 	// }
 
-	if validCount >= limit {
+	if validCount32 >= limit {
 		RateLimitRequests.WithLabelValues("denied").Inc()
 		return false, 0, nil
 	}
@@ -77,7 +84,7 @@ func (sw *SlidingWindow) Allow(key string, limit int32, windowMs time.Duration) 
 	RateLimitRequests.WithLabelValues("allowed").Inc()
 
 	// sw.requests[key]=validTimestamps
-	remaining := limit - validCount - 1
+	remaining := limit - validCount32 - 1
 	if remaining < 0 {
 		remaining = 0
 	}
@@ -90,29 +97,41 @@ func (sw *SlidingWindow) StartJanitor(interval time.Duration, maxWindow time.Dur
 		defer ticker.Stop()
 
 		for range ticker.C {
-			sw.cleanUp(maxWindow)
+			if sw.RaftNode != nil && sw.RaftNode.State() == raft.Leader {
+				slog.Info("Janitor: Node is Leader, starting cleanup")
+				sw.cleanUp(maxWindow)
+			} else {
+				slog.Info("Janitor: Node is Follower, skipping cleanup")
+			}
 		}
 	}()
 }
 
 func (sw *SlidingWindow) cleanUp(maxWindow time.Duration) {
-	sw.mu.Lock()
-	defer sw.mu.Unlock()
-
+	sw.mu.RLock()
+	var keysToDelete []string
 	now := time.Now()
 	boundary := now.Add(-maxWindow)
 
 	for key, timestamps := range sw.requests {
-		var validTimestamps []time.Time
-		for _, ts := range timestamps {
-			if ts.After(boundary) {
-				validTimestamps = append(validTimestamps, now)
-			}
+		// var validTimestamps []time.Time
+		// for _, ts := range timestamps {
+		if len(timestamps) > 0 && timestamps[len(timestamps)-1].Before(boundary) {
+			keysToDelete = append(keysToDelete, key)
 		}
-		if len(validTimestamps) > 0 {
-			sw.requests[key] = validTimestamps
-		} else {
-			delete(sw.requests, key)
-		}
+		// if ts.After(boundary) {
+		// 	validTimestamps = append(validTimestamps, ts)
+		// }
+	}
+	sw.mu.RUnlock()
+	// if len(validTimestamps) > 0 {
+	// 	sw.requests[key] = validTimestamps
+	// } else {
+	// 	delete(sw.requests, key)
+	// }
+	for _, key := range keysToDelete {
+		cmd := LogCommand{Type: CommandDeleteKey, Key: key}
+		data, _ := cmd.Encode()
+		sw.RaftNode.Apply(data, 500*time.Millisecond)
 	}
 }

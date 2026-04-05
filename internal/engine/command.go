@@ -9,6 +9,7 @@ type CommandType string
 
 const (
 	CommandAddTimestamp CommandType = "ADD_TIMESTAMP"
+	CommandDeleteKey    CommandType = "DELETE_KEY"
 )
 
 type LogCommand struct {
