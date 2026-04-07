@@ -13,8 +13,8 @@ import (
 
 	"github.com/AbhinavG786/Gopher-Guard/internal/engine"
 	mygrpc "github.com/AbhinavG786/Gopher-Guard/internal/grpc"
-	"github.com/AbhinavG786/Gopher-Guard/pkg/pb"
 	myraft "github.com/AbhinavG786/Gopher-Guard/internal/raft"
+	"github.com/AbhinavG786/Gopher-Guard/pkg/pb"
 	"github.com/hashicorp/raft"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

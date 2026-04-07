@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package limiter;
 
-option go_package ="github.com/AbhinavG786/GopherGuard/pkg/pb";
+option go_package = "github.com/AbhinavG786/Gopher-Guard/pkg/pb;pb";
 
 message RateLimitRequest{
     string key=1;
