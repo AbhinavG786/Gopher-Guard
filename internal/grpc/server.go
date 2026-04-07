@@ -3,7 +3,7 @@ package grpc
 import (
 	"context"
 	"github.com/AbhinavG786/Gopher-Guard/internal/engine"
-	"github.com/AbhinavG786/Gopher-Guard/internal/grpc/pb"
+	"github.com/AbhinavG786/Gopher-Guard/pkg/pb"
 	"log/slog"
 	"time"
 )

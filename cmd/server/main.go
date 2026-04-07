@@ -13,7 +13,7 @@ import (
 
 	"github.com/AbhinavG786/Gopher-Guard/internal/engine"
 	mygrpc "github.com/AbhinavG786/Gopher-Guard/internal/grpc"
-	"github.com/AbhinavG786/Gopher-Guard/internal/grpc/pb"
+	"github.com/AbhinavG786/Gopher-Guard/pkg/pb"
 	myraft "github.com/AbhinavG786/Gopher-Guard/internal/raft"
 	"github.com/hashicorp/raft"
 	"github.com/joho/godotenv"

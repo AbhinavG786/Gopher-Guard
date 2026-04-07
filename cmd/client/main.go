@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"github.com/AbhinavG786/Gopher-Guard/internal/grpc/pb"
+	"github.com/AbhinavG786/Gopher-Guard/pkg/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
