@@ -1,5 +1,9 @@
 # 🛡️ Gopher-Guard
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/AbhinavG786/Gopher-Guard)](https://goreportcard.com/report/github.com/AbhinavG786/Gopher-Guard)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docker Hub](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)](https://hub.docker.com/r/abhinavg786/gopher-guard)
+
 A highly available, distributed rate-limiting microservice written in Go. Gopher-Guard implements a strongly consistent, fault-tolerant cluster using the **Raft Consensus Algorithm**, enforcing API rate limits across multiple physical nodes without external dependencies like Redis.
 
 ## 🚀 Technical highlights
@@ -35,11 +39,11 @@ A highly available, distributed rate-limiting microservice written in Go. Gopher
 - `protoc` (Protocol Buffers compiler)
 - `protoc-gen-go` and `protoc-gen-go-grpc` plugins
 
-## 🚦 Running locally with Docker Compose (recommended)
+## Getting Started: Deploying the Cluster
 
-The project now provides a Docker Compose configuration that boots a multi-node cluster (5 nodes by default) plus an NGINX load balancer and observability stack (Prometheus + Grafana). This is the recommended way to start a reproducible local environment.
+Gopher-Guard is a self-hosted infrastructure tool. You must first boot the cluster before your applications can use it. The project now provides a Docker Compose configuration that boots a multi-node cluster (5 nodes by default) plus an NGINX load balancer and observability stack (Prometheus + Grafana). This is the recommended way to start a reproducible local environment.
 
-1. Start the stack
+**1. Start the stack**
 
 ```bash
 docker compose up --build -d
@@ -52,7 +56,7 @@ This will build the image and start the nodes. Containers expose the following u
 - Prometheus: `9090`
 - Grafana: `3000` (login: `admin` / `admin`)
 
-2. Form the Cluster
+**2. Form the Cluster**
 
 By default, Node 1 starts in bootstrap mode. You must manually join the other nodes to form the quorum. Run these from the host (they target the container admin ports):
 
@@ -63,31 +67,62 @@ curl "http://localhost:8082/join?id=node-4&addr=gopher-node-4:7003"
 curl "http://localhost:8083/join?id=node-5&addr=gopher-node-5:7004"
 ```
 
-3. Run the gRPC test client (pointed at the load balancer)
+**Legacy** : there is still a `start_cluster.sh` script that can be used for simple local bootstrapping without Docker. The Docker Compose flow is preferred for reproducible, observable environments.
 
-```bash
-go run cmd/client/main.go
+
+## 🔌 Integrating the Go SDK
+
+Gopher-Guard provides a robust, auto-retrying Go client SDK. You do not need to manage gRPC connections or Raft leader failovers yourself; the SDK handles it automatically.
+
+**1. Install the SDK :**
+```
+go get github.com/AbhinavG786/Gopher-Guard/client
 ```
 
-3. Stop and remove the stack and volumes
+**2. Protect your API :**  (💡Check out the `/examples` folder for a fully reproducible integration environment. )
 
-```bash
-docker compose down -v
+*Example* :
+```
+package main
+
+import (
+	"context"
+	"fmt"
+	"time"
+	"[github.com/AbhinavG786/Gopher-Guard/client](https://github.com/AbhinavG786/Gopher-Guard/client)"
+)
+
+func main() {
+	// Connect to your Gopher-Guard load balancer
+	guard, err := client.New("localhost:80")
+	if err != nil {
+		panic(err)
+	}
+	defer guard.Close()
+
+	// Ask the cluster for permission (e.g., 100 requests per minute)
+	allowed, remaining, err := guard.Allow(context.Background(), "user_123", 100, time.Minute)
+	
+	if err != nil {
+		fmt.Println("⚠️ Cluster unavailable. Failsafe activated.")
+		return
+	}
+
+	if !allowed {
+		fmt.Println("🚫 HTTP 429: Too Many Requests")
+		return
+	}
+
+	fmt.Printf("✅ HTTP 200: Request processed. Remaining quota: %d\n", remaining)
+}
 ```
 
-4. (Optional) Clean persisted Raft data on the host
-
-```bash
-rm -rf ./docker-data
-```
-
-Legacy: there is still a `start_cluster.sh` script that can be used for simple local bootstrapping without Docker. The Docker Compose flow is preferred for reproducible, observable environments.
 
 ## 🧪 Simulating fault tolerance
 
 To test leader failover with Docker Compose:
 
-1. Identify the leader via container logs (look for election/leadership messages) or check the node admin ports.
+1. Identify the leader via container logs (look for election/leadership messages) or check the the Grafana dashboard.
 2. Simulate an immediate crash (assassination test)
 
 To emulate a sudden crash (SIGKILL) and observe rapid leader re-election, use `docker kill` instead of `docker stop`:
@@ -120,6 +155,10 @@ Open Grafana to inspect cluster health, per-node request rates, and rate-limit s
 - `go.etcd.io/bbolt` (bbolt) — embedded key/value store
 - `github.com/joho/godotenv` — environment configuration helper
 
----
-
 For development questions or help running the cluster, open an issue or contact the maintainer.
+
+## 📄 License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
