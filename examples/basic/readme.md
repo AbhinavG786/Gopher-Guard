@@ -15,7 +15,10 @@ You don't need to clone the source code to run Gopher-Guard. You can simply pull
 docker compose up -d
 ```
 
-(Note: For production, I recommend running the full 5-node cluster with Nginx as defined in the root repository).
+📝 **Note on Architecture :**
+This example uses a lightweight, single-node Gopher-Guard container for quick integration testing and low CPU usage. It will perfectly simulate rate-limiting behavior, but it does not demonstrate Raft consensus
+
+To test the full fault-tolerant, 5-node cluster with Nginx failover and Grafana observability, please use the docker-compose.yml located in the root of the main repository.
 
 ## 📦 Step 2: Install the Go SDK
 

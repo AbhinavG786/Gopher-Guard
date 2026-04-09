@@ -79,7 +79,7 @@
             "uid": "gopher-prometheus"
           },
           "editorMode": "code",
-          "expr": "raft_is_leader",
+          "expr": "raft_is_leader * up",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -260,6 +260,6 @@
   "timezone": "browser",
   "title": "Gopher-Guard Default Dashboards",
   "uid": "ad5dqck",
-  "version": 6,
+  "version": 1,
   "weekStart": ""
 }

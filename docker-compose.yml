@@ -129,5 +129,26 @@ services:
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards 
 
+  # CLUSTER BOOTSTRAPPER (Automates the quorum)
+  cluster-bootstrapper:
+    image: curlimages/curl:latest
+    container_name: gopher-bootstrapper
+    depends_on:
+      - node-1
+      - node-2
+      - node-3
+      - node-4
+      - node-5
+    command: >
+      sh -c "
+      echo 'Waiting 5 seconds for nodes to boot...';
+      sleep 5;
+      curl -s 'http://gopher-node-1:8080/join?id=node-2&addr=gopher-node-2:7001';
+      curl -s 'http://gopher-node-1:8080/join?id=node-3&addr=gopher-node-3:7002';
+      curl -s 'http://gopher-node-1:8080/join?id=node-4&addr=gopher-node-4:7003';
+      curl -s 'http://gopher-node-1:8080/join?id=node-5&addr=gopher-node-5:7004';
+      echo '\n Cluster formed successfully!';
+      "
+
 volumes:
   grafana-storage:

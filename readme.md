@@ -56,15 +56,13 @@ This will build the image and start the nodes. Containers expose the following u
 - Prometheus: `9090`
 - Grafana: `3000` (login: `admin` / `admin`)
 
-**2. Form the Cluster**
+**2. Automatic Cluster Formation**
 
-By default, Node 1 starts in bootstrap mode. You must manually join the other nodes to form the quorum. Run these from the host (they target the container admin ports):
+Gopher-Guard features a fully automated "Zero-Touch" deployment. When you run the `docker compose` command above, a temporary bootstrapper container runs in the background and automatically links the 5 nodes together to form the Raft quorum. No manual setup is required!
 
+To verify the cluster formed successfully, you can check the bootstrapper logs:
 ```bash
-curl "http://localhost:8080/join?id=node-2&addr=gopher-node-2:7001"
-curl "http://localhost:8081/join?id=node-3&addr=gopher-node-3:7002"
-curl "http://localhost:8082/join?id=node-4&addr=gopher-node-4:7003"
-curl "http://localhost:8083/join?id=node-5&addr=gopher-node-5:7004"
+docker logs gopher-bootstrapper
 ```
 
 **Legacy** : there is still a `start_cluster.sh` script that can be used for simple local bootstrapping without Docker. The Docker Compose flow is preferred for reproducible, observable environments.
