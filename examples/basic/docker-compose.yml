@@ -1,6 +1,6 @@
 services:
   gopher-guard:
-    image: abhinavg786/gopher-guard:v1.2.0
+    image: abhinavg786/gopher-guard:v1.2.1
     ports:
       - "50051:50051" # gRPC Port
       - "8080:8080"   # Admin/Join Port

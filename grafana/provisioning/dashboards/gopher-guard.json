@@ -79,8 +79,8 @@
             "uid": "gopher-prometheus"
           },
           "editorMode": "code",
-          "expr": "raft_is_leader * up",
-          "legendFormat": "__auto",
+          "expr": "(raft_is_leader * up) or (up * 0)",
+          "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
